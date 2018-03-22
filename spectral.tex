@@ -1,0 +1,107 @@
+\documentclass{amsart}
+\usepackage{fullpage}
+
+\title{Notes on Distributed Persistence}
+
+\begin{document}
+\maketitle
+
+In this note, we present an approach to compute persistent homology in a parallelized way independent of the underlying filtration. This makes the approach orthogonal to the existing methods.
+
+
+
+\section{Small Intersections}
+A good candidate of complexes are ones with geometric spearators. 
+%\begin{defintiion}
+%A complex has a	$(\alpha,\beta)$-separator if for every subcomplex of size $n$ can be divided into two pieces such that each piece is at least of size $\alpha n$ and the intersection is of size at most $n^\beta$. 
+%\end{defintion}
+
+Our key goal is to construct a cover such that all intersections (and higher intersections) are of size of the  each cover element. Consider a 
+recursive strategy with $k$ steps. 
+Each cover element is of size $\alpha^k n$. Since higher interesections are included in the individual intersections it is sufficient to consider only intersections.
+The size of the intersections can be written as 
+$$
+S_k =\sum\limits_{i=0}^{k-1} (2\alpha^\beta)^ = \frac{1-(2\alpha^\beta)^k  }  {1-2\alpha^\beta}$$
+To find the optimal number of steps, we solve
+$$ n^{1-\beta} = \frac{S_k}{\alpha^k}$$
+We solve for the specific case of $\alpha = \beta = 1/2$.
+$S_k = \frac{1-\sqrt{2}^k}{1-\sqrt{2}}$
+\begin{align*}
+	n^{1/2} &=  \frac{\sqrt{2}-1}{2^k(\sqrt{2}^k-1)}\\
+	(2\sqrt{2})^k - 2^k &= (\sqrt{2}-1) n^{1/2}\\
+	(2\sqrt{2})^k  &> (\sqrt{2}-1) n^{1/2}\\
+	3k/2 &> 1/2 log_2 n + \log c  \\
+	k &> 1/3 \log_2 n 
+\end{align*}
+We can set it back in to see the size of each element is then
+$$m = \alpha^k n =   (1/2)^{1/3\log_2 n} = n^{2/3}$$
+
+
+TODO: for general d-cubical complexes.
+
+
+Can we say anything in general?
+
+The equation we need to satisfy is
+$$ n^{1-\beta} \geq \frac{S_k}{\alpha^k}$$
+\begin{align*}
+	n^{1-\beta} &\geq \frac{S_k}{\alpha^k}\\
+	n^{1-\beta}(2\alpha^\beta-1)& \geq  \frac{(2\alpha^\beta)^k -1 }{\alpha^k}\\
+	n^{1-\beta}(2\alpha^\beta-1)& \geq  \frac{(2\alpha^\beta)^k }{\alpha^k}\\
+	n^{1-\beta}(2\alpha^\beta-1)& \geq  (2\alpha^{\beta-1})^k 
+\end{align*}
+Rearranging, we obtain
+\begin{align*}
+	k &\leq \frac{\log_a (n^{1-\beta}(2\alpha^\beta-1))}{\log_a (2\alpha^{\beta-1}) } \\
+	&\leq \frac{(1-\beta)\log_a n + \log_a (2\alpha^\beta-1))}{(1-\beta)\log_a \frac{\sqrt[1-\beta]{2}}{\alpha }}
+\end{align*}
+The second term is a constant so we ignore it. 
+\begin{align*}
+	k&\leq  \frac{(1-\beta)\log_a n } {(1-\beta)\log_a \frac{\sqrt[1-\beta]{2}}{\alpha }}\\
+	&\leq \frac{\log_a n }{\log_a \frac{\sqrt[1-\beta]{2}}{\alpha }}\\
+\end{align*}
+Now we can plug in to get the size of a cover element. Set $a=1/\alpha$
+\begin{align*}
+	k&\leq \frac{\log_{1/\alpha} n }{\log_{1/\alpha} \sqrt[1-\beta]{2} +\log_{1/\alpha} 1/\alpha }\\
+	&\leq \frac{\log_{1/\alpha} n }{\log_{1/\alpha} \sqrt[1-\beta]{2} + 1}\\
+	& \leq \log_{1/\alpha} n^{(1/(\log_{1/\alpha} \sqrt[1-\beta]{2} + 1))} 
+\end{align*}
+To get the final answer
+\begin{align*}
+	m & = \alpha^k n  = (1/\alpha)^{\log_{1/\alpha} n^{(-1/(\log_{1/\alpha} \sqrt[1-\beta]{2} + 1))} } n\\ 
+	& = n^\gamma
+\end{align*}
+where
+\begin{align*}
+	\gamma & = 1 -\frac{1}{\log_{1/\alpha} \sqrt[1-\beta]{2} + 1}\\
+	&=\frac{\log_{1/\alpha} (\sqrt[1-\beta]{2} ) }{\log_{1/\alpha} (\sqrt[1-\beta]{2} ) + 1}\\
+	&=\frac{\frac{1}{1-\beta}\log_{1/\alpha} 2}{\frac{1}{1-\beta}\log_{1/\alpha} 2  + 1}
+\end{align*}
+
+
+For a cubical grid in dimension 2, $\alpha=\beta =1/2$
+yielding
+$$ \gamma = \frac{2}{3} $$
+
+For a $d$-dimensional grid  $\alpha=1/2$ and $\beta =(d-1)/d$
+yielding
+\begin{align*}
+	\gamma &= \frac{\frac{1}{1-\frac{d-1}{d}}}{\frac{1}{1-\frac{d-1}{d}}+1} = \frac{d}{d+1}
+\end{align*}
+
+Final expression:
+$$ \gamma = \frac{\log_{1/\alpha} 2}{\log_{1/\alpha} 2 + 1 -\beta}$$
+\section{Setup}
+
+
+\section{Operations}
+
+\section{Computing Maps}
+
+\section{Distributed Kernel Representations}
+
+
+\section{Solving the Extension}
+
+
+\end{document}
