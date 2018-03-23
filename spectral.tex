@@ -1,9 +1,16 @@
 \documentclass{amsart}
-\usepackage{fullpage}
+\usepackage{fullpage,amsthm,amssymb,amsfonts}
+ 
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{corollary}{Corollary}[theorem]
+\newtheorem{lemma}{Lemma}[theorem]
+\newtheorem{definition}{Definition}[theorem]
 
+\newcommand{\im}{\mathrm{im\;}}
 \title{Notes on Distributed Persistence}
 
 \begin{document}
+ 
 \maketitle
 
 In this note, we present an approach to compute persistent homology in a parallelized way independent of the underlying filtration. This makes the approach orthogonal to the existing methods.
@@ -12,9 +19,9 @@ In this note, we present an approach to compute persistent homology in a paralle
 
 \section{Small Intersections}
 A good candidate of complexes are ones with geometric spearators. 
-%\begin{defintiion}
-%A complex has a	$(\alpha,\beta)$-separator if for every subcomplex of size $n$ can be divided into two pieces such that each piece is at least of size $\alpha n$ and the intersection is of size at most $n^\beta$. 
-%\end{defintion}
+\begin{definition}
+A complex has a $(\alpha,\beta)$-separator if for every subcomplex of size $n$ can be divided into two pieces such that each piece is at least of size $\alpha n$ and the intersection is of size at most $n^\beta$. 
+\end{definition}
 
 Our key goal is to construct a cover such that all intersections (and higher intersections) are of size of the  each cover element. Consider a 
 recursive strategy with $k$ steps. 
@@ -30,7 +37,7 @@ $S_k = \frac{1-\sqrt{2}^k}{1-\sqrt{2}}$
 	n^{1/2} &=  \frac{\sqrt{2}-1}{2^k(\sqrt{2}^k-1)}\\
 	(2\sqrt{2})^k - 2^k &= (\sqrt{2}-1) n^{1/2}\\
 	(2\sqrt{2})^k  &> (\sqrt{2}-1) n^{1/2}\\
-	3k/2 &> 1/2 log_2 n + \log c  \\
+	3k/2 &> (1/2 ) \log_2 n + \log c  \\
 	k &> 1/3 \log_2 n 
 \end{align*}
 We can set it back in to see the size of each element is then
@@ -92,16 +99,99 @@ yielding
 Final expression:
 $$ \gamma = \frac{\log_{1/\alpha} 2}{\log_{1/\alpha} 2 + 1 -\beta}$$
 \section{Setup}
+Here we go through the preliminaries required for the algorithm.
+\begin{theorem}
+	Any finitely generated module admits a free presentation.
+\end{theorem}
+
+\begin{theorem}
+	Given a $n\times n$ matrix over $k[t]$, extracting a basis can be done in $O(n^\omega)$ time in $O(n^2)$ space.
+\end{theorem}
+\begin{proof}
+	Reference.
+\end{proof}
+
+\begin{lemma}
+	A free presentation can be represented by $3$ $n \times n$ matrices.
+\end{lemma}
+
 
 
 \section{Operations}
+\begin{lemma}
+	Given a chain map, the presentation of the  kernel, image and cokernel can be computed in $O(n^\omega)$ time in $O(n^2)$ space, where $n$ is the maximum of the size of the domain and codomain.  
+\end{lemma}
+\begin{proof}
+\end{proof}
+
+We consider a block matrix $A = (A_1,\ldots,A_k)$, with $k$ $n\times n$ blocks. with a block diagonal map $f = (f_1,\ldots, f_k)$ which maps into an $n\times n$ matrix $B$.  Here we look at the same operations as above.  We first consider a serial scheme. 
+
+\begin{lemma}
+The image of the map $f: A\rightarrow B$ can be computed in  $O(kn^\omega)$ with $O(n^2)$ extra space. 
+\end{lemma}
+\begin{proof}
+	Computing the images takes  $O(kn^\omega)$ with $O(n^2)$ extra space by computing $f_i(A_i)$. However, doing this directly results in a $n \times kn$ matrix (since the direct sum of the images can have $kn$ elements). To compute the image,  let 
+	$basis(\cdot)$ denote extracting a basis (this take $O(n^\omega)$ and can be done in place). 
+	Iniitalize 
+	$$\im f^{1} := basis(f_1(A_1)) $$ 
+	Now consider the loop
+	$$\im f^{i+1} := basis(f_i(A_i)\cup \im f^{i}) $$ 
+	where union here is meant as the union of generating elements (basis elements).
+	Computing $\im f^{i+1}$ takes  $O(n^\omega)$ time. To compute the complete basis we run this $k$ times, yielding the bound.  Note that at any one point we use $O(n^2)$ extra space. 
+
+	The memory constraint can be reduced using several tricks or considering a parallel model (though I need to refresh the models for this - perhaps external memory model).
+\end{proof}
+
+
+\begin{lemma}
+The cokernel of the map $f: A\rightarrow B$ can be computed in $O(kn^\omega)$ with $O(n^2)$ extra space. 
+\end{lemma}
+\begin{proof}
+	Compute the image, then the cokernel can be computed by considering  the basis  $basis(f(A)\cup B  )  $ and tkaing the elements which come from $B$.
+\end{proof}
+Note that in here we consider this for generators and relations separately.  TODO: I will add more details and some pictures soon.
+
+
+\begin{lemma}
+	The kernel of the map $f: A\rightarrow B$ can be computed in $O(kn^\omega)$ with $O(n^2)$ extra space (storing the kernel takes $O(kn^2)$ space total).
+\end{lemma}
+\begin{proof}
+Assume we have computed the image. Repeating the procedure as for the image, there is a bound on $kn$ elements in the kernel. While the chains may be of size $kn$, they can be expressed as linear combinations of the image basis, hence they have at most $n$ entries, yielding the result.
+\end{proof}
+
+The above could be improved. 	
+First note that 
+	$$ \bigoplus \ker f_i \subseteq \ker f $$
+	This direct sum can be computed in $O(kn^\omega)$ time and takes  up $O(kn^2)$ space (the block structure is preserved). What remains to be shown is that the remaining part of the kernel can be computed efficiently. I believe asymptotically it doesnt make any difference if we have a distributed representation - but it may be desirable in practice. First divide the kernel as the kernel of $f_i$. If it is in the  $\im f_i$, but not $\im f$ then it is in the kernel. In this way we could maintain the block structure at no increase of memory usage (with a sparse representation). TODO: Add picture and proof of correctness.
+	
 
 \section{Computing Maps}
 
-\section{Distributed Kernel Representations}
+The first two differentials are given as chain maps. In these cases, the induced maps are simply computed by applying the (co)chain maps to the (co)chain representatives. 
+However, for higher differentials it is less clear as we need to compute the maps.
+
+The algorithm is to take an element of the kernel of the $i$-th differential. If the resulting (co)chain is a bounded (co)cycle, we then choose a lift and apply the chain map. 
+
+Here we need to be a little careful. If the resulting row space is in terms of the homology on the $i$-th page, the algorithms as above work as described. If we remain in chain space, then the reduction must be done a little more carefully.  The image must be computed by intersecting with elements which are still ``alive" on the $i$-page. It should be possible to do this implicitly. 
+
+The algorithm above is a cubic time algorithm since it is incremental. Therefore it would be better to characterize it in terms of matrix operations. Let $D$ represent the (vertical) (co)boundary operator. Compute a basis
+for the image of $D_i$, denoted $\hat{D_i}$.  Let $A^{j}$  be a basis on  the $j$-th page. 
+Any non-zero element of $D_j A^j$ must be in the span of $D_0$. To see this note that 
+$$D_0 D_j A^j = D_j D_0 A^j$$   
+Since $A^j$ is on the $j$-th page it must be a cocycle with respect to $D_0$ hence at the chain level $D_j A^j$ must all be cocycle. However, since they are trivial, it follows they must be in the span of the image $D_0$ (this is in the quotient of the first page). 	
+
+Reducing $D_j A^j$ with repect to the basis $D_0$ (this i am ositive can be done in matrix multiplication time) we obtain the lift (preimage). Applying $D_1$ is matrix multiplication. This gives the cochains as above in the incremental procedure.
+
+TODO: still resolve the basis issue at the end.  I think it is easiest if we keep everything as chains. This is again just reduction with respect to different basis.  This should have a nice description in terms of matrices and spans. 
 
 
 \section{Solving the Extension}
 
+The last stage is resolving the extension problem. 
+This should again have an incremental approach, the first/last stage is to solve the 
+$$ D_1 A^\infty = D_0 B^\infty$$
+This is the same as the differential computation just in the other direction.
 
+
+TODO: This part has to be made much more explicit. 
 \end{document}
